@@ -2,11 +2,19 @@
 # Copyright (C) 2007-2016, Marvell International Ltd.
 #
 
+CROSS_COMPILE=arm-linux-gnueabihf-
 CC=		$(CROSS_COMPILE)gcc
 LD=		$(CROSS_COMPILE)ld
 
 BACKUP=		/root/backup
 YMD=		`date +%Y%m%d%H%M`
+
+#######COMPILE CHECK###################
+EXTRA_CFLAGS += -Wno-unused-but-set-variable
+EXTRA_CFLAGS += -Wno-pointer-sign
+#EXTRA_CFLAGS += -Wno-pointer-to-int-cast
+#EXTRA_CFLAGS += -Wno-int-to-pointer-cast
+
 
 #############################################################################
 # Configuration Options
@@ -48,9 +56,9 @@ endif
 
 
 
-KERNELVERSION_X86 := 	$(shell uname -r)
-KERNELDIR?=/lib/modules/$(KERNELVERSION_X86)/build
-
+#KERNELVERSION_X86 := 	$(shell uname -r)
+#KERNELDIR?=/lib/modules/$(KERNELVERSION_X86)/build
+KERNELDIR?=/mnt/nfsroot/weiguang.ruan/linux/buildroot/output/build/linux-custom
 
 EXTRA_CFLAGS += -I$(KERNELDIR)/include
 
@@ -98,7 +106,7 @@ bt8xxx-objs := $(BTOBJS)
 # Otherwise we were called directly from the command line; invoke the kernel build system.
 else
 default:
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
+	$(MAKE) -C $(KERNELDIR) ARCH=arm M=$(PWD) modules -j8
 endif
 
 ###############################################################
@@ -136,6 +144,7 @@ clean:
 	-find . -name "*.symvers" -exec rm {} \;
 	-find . -name "modules.order" -exec rm {} \;
 	-rm -rf .tmp_versions
+	-rm -rf modules.builtin
 	$(MAKE) -C app/fm_app $@
 
 install: default
