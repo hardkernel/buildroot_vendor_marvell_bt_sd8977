@@ -2,7 +2,7 @@
  *  @brief This header file contains global constant/enum definitions,
  *  global variable declaration.
  *
- *  Copyright (C) 2007-2016, Marvell International Ltd.
+ *  Copyright (C) 2007-2017, Marvell International Ltd.
  *
  *  This software file (the "File") is distributed by Marvell International
  *  Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -40,17 +40,15 @@ typedef u64 t_ptr;
 typedef u32 t_ptr;
 #endif
 
+/** max number of adapter supported */
+#define MAX_BT_ADAPTER      3
 /** Define drv_mode bit */
 #define DRV_MODE_BT         BIT(0)
-#define DRV_MODE_FM        BIT(1)
-#define DRV_MODE_NFC       BIT(2)
 
 /** Define devFeature bit */
 #define DEV_FEATURE_BT     BIT(0)
 #define DEV_FEATURE_BTAMP     BIT(1)
 #define DEV_FEATURE_BLE     BIT(2)
-#define DEV_FEATURE_FM     BIT(3)
-#define DEV_FEATURE_NFC     BIT(4)
 
 /** Define maximum number of radio func supported */
 #define MAX_RADIO_FUNC     4
@@ -310,6 +308,43 @@ os_sched_timeout(u32 millisec)
 #define __ATTRIB_PACK__ __attribute__((packed))
 #endif
 
+/** BT histogram command */
+#define BT_CMD_HISTOGRAM            0xEA
+/** max antenna num */
+#define MAX_ANTENNA_NUM             2
+/** BDR 1M */
+#define BDR_RATE_1M					1
+/** EDR 2/3 M */
+#define EDR_RATE_2_3M			    2
+/** BLE 1M */
+#define BLE_RATE_1M                 5
+/** max bt link number */
+#define MAX_BT_LINK                 10
+/** max ble link number */
+#define MAX_BLE_LINK                16
+
+typedef struct _bt_link_stat {
+    /** txrx rate 1: BDR_1M, 2:EDR 2/3 M, 3:BLE 1M */
+	u8 txrxrate;
+    /** power: -30 = N = 20 dbm*/
+	s8 txpower;
+    /** rssi: -127 to +20 (For BT), -128 to +127 (For BLE) */
+	s8 rssi;
+} __ATTRIB_PACK__ bt_link_stat;
+
+typedef struct _bt_histogram_data {
+	u8 antenna;
+	u8 powerclass;
+	bt_link_stat link[MAX_BT_LINK + MAX_BLE_LINK];
+} __ATTRIB_PACK__ bt_histogram_data;
+
+typedef struct _bt_hist_proc_data {
+    /** antenna */
+	u8 antenna;
+	/** Private structure */
+	struct _bt_private *pbt;
+} bt_hist_proc_data;
+
 /** Data structure for the Marvell Bluetooth device */
 typedef struct _bt_dev {
 	/** device name */
@@ -366,8 +401,6 @@ typedef struct _bt_dev {
 typedef struct _bt_adapter {
 	/** Chip revision ID */
 	u8 chip_rev;
-    /** magic val */
-	u8 magic_val;
 	/** Surprise removed flag */
 	u8 SurpriseRemoved;
 	/** IRQ number */
@@ -376,6 +409,10 @@ typedef struct _bt_adapter {
 	u32 IntCounter;
 	/** Tx packet queue */
 	struct sk_buff_head tx_queue;
+	/** Pointer of fw dump file name */
+	char *fwdump_fname;
+	/** Fw dump queue */
+	struct sk_buff_head fwdump_queue;
 	/** Pending Tx packet queue */
 	struct sk_buff_head pending_queue;
 	/** tx lock flag */
@@ -458,6 +495,8 @@ struct proc_private_data {
 struct device_proc {
 	/** Proc directory entry */
 	struct proc_dir_entry *proc_entry;
+    /** proc entry for hist */
+	struct proc_dir_entry *hist_entry;
 	/** num of proc files */
 	u8 num_proc_files;
 	/** pointer to proc_private_data */
@@ -494,16 +533,18 @@ typedef struct _bt_private {
 	ulong driver_flags;
 	/** Driver reference flags */
 	struct kobject kobj;
-	/** CRC check flag */
-	u16 fw_crc_check;
-	/** Card type */
-	u16 card_type;
-	/** sdio device */
-	const struct sdio_device *psdio_device;
 	int debug_device_pending;
 	int debug_ocf_ogf[2];
 	u8 fw_reload;
+	/* hist_data_len */
+	u8 hist_data_len;
+    /** hist data */
+	bt_histogram_data hist_data[MAX_ANTENNA_NUM];
+    /** hist proc data */
+	bt_hist_proc_data hist_proc[MAX_ANTENNA_NUM];
 } bt_private, *pbt_private;
+
+int bt_get_histogram(bt_private *priv);
 
 /** Disable interrupt */
 #define OS_INT_DISABLE	spin_lock_irqsave(&priv->driver_lock, \
@@ -521,10 +562,6 @@ typedef struct _bt_private {
 #define DEV_TYPE_BT		0x00
 /** Device type of AMP */
 #define DEV_TYPE_AMP		0x01
-/** Device type of FM */
-#define DEV_TYPE_FM		0x02
-/** Device type of NFC */
-#define DEV_TYPE_NFC		0x04
 
 /** Marvell vendor packet */
 #define MRVL_VENDOR_PKT			0xFE
@@ -551,20 +588,6 @@ typedef struct _bt_private {
 #define BT_CMD_ENABLE_WRITE_SCAN	0x1A
 /** Bluetooth command : Enable Device under test mode */
 #define BT_CMD_ENABLE_DEVICE_TESTMODE	0x03
-#if defined(SDIO_SUSPEND_RESUME)
-/* FM default event interrupt mask
-		bit[0], RSSI low
-		bit[1], New RDS data
-		bit[2], RSSI indication */
-#define FM_DEFAULT_INTR_MASK    0x07
-/** Disable FM event interrupt mask */
-#define FM_DISABLE_INTR_MASK    0x00
-/** FM set event interrupt mask command */
-#define FM_SET_INTR_MASK	0x2E
-/** FM ocf value */
-#define FM_CMD			    0x0280
-int fm_set_intr_mask(bt_private *priv, u32 mask);
-#endif
 /** Sub Command: Module Bring Up Request */
 #define MODULE_BRINGUP_REQ		0xF1
 /** Sub Command: Module Shut Down Request */
@@ -663,6 +686,10 @@ typedef struct _BT_EVENT {
 	u8 data[8];
 } BT_EVENT;
 
+#if defined(SDIO_SUSPEND_RESUME)
+#define DEF_GPIO_GAP        0xffff
+#endif
+
 /** This function verify the received event pkt */
 int check_evtpkt(bt_private *priv, struct sk_buff *skb);
 
@@ -695,6 +722,8 @@ int bt_enable_hs(bt_private *priv);
 int bt_prepare_command(bt_private *priv);
 /** This function frees the structure of adapter */
 void bt_free_adapter(bt_private *priv);
+/** This function handle the receive packet */
+void bt_recv_frame(bt_private *priv, struct sk_buff *skb);
 
 /** clean up m_devs */
 void clean_up_m_devs(bt_private *priv);
@@ -717,6 +746,10 @@ int sbi_register_conf_dpc(bt_private *priv);
 int sbi_host_to_card(bt_private *priv, u8 *payload, u16 nb);
 /** This function reads the current interrupt status register */
 int sbi_get_int_status(bt_private *priv);
+/** This function enables the host interrupts */
+int sbi_enable_host_int(bt_private *priv);
+/** This function disables the host interrupts */
+int sbi_disable_host_int(bt_private *priv);
 
 /** bt fw reload flag */
 extern int bt_fw_reload;
@@ -728,10 +761,6 @@ extern int bt_fw_reload;
 #define FW_RELOAD_WITH_EMULATION 3
 /** This function reload firmware */
 void bt_request_fw_reload(bt_private *priv, int mode);
-/** This function enables the host interrupts */
-int sd_enable_host_int(bt_private *priv);
-/** This function disables the host interrupts */
-int sd_disable_host_int(bt_private *priv);
 #define MAX_TX_BUF_SIZE     2312
 /** This function downloads firmware image to the card */
 int sd_download_firmware_w_helper(bt_private *priv);

@@ -1,5 +1,5 @@
 # File: Makefile
-# Copyright (C) 2007-2016, Marvell International Ltd.
+# Copyright (C) 2007-2017, Marvell International Ltd.
 #
 
 CC=		$(CROSS_COMPILE)gcc
@@ -18,6 +18,7 @@ YMD=		`date +%Y%m%d%H%M`
 # 1: PRINTM(MSG,...), PRINTM(FATAL,...), PRINTM(WARN,...) and PRINTM(INFO,...)
 # 2: All PRINTM()
 CONFIG_DEBUG=1
+
 
 # SDIO suspend/resume
 CONFIG_SDIO_SUSPEND_RESUME=y
@@ -52,7 +53,6 @@ endif
 KERNELVERSION_X86 := 	$(shell uname -r)
 KERNELDIR?=/lib/modules/$(KERNELVERSION_X86)/build
 
-
 EXTRA_CFLAGS += -I$(KERNELDIR)/include
 
 EXTRA_CFLAGS += -I$(M)/../mbtchar_src
@@ -62,6 +62,7 @@ LD += -S
 #ifdef SD8xxx
 BINDIR = ../bin_sd8xxx_btchar
 #endif
+BINDIR = ../bin_sd8977_btchar
 
 #############################################################################
 # Compiler Flags
@@ -92,9 +93,13 @@ BTOBJS = bt/bt_main.o bt/bt_sdiommc.o bt/bt_proc.o bt/mbt_char.o
 
 BTOBJS += bt/bt_init.o
 
+ifeq ($(CONFIG_MULTI_INTERFACE), y)
+obj-m := mbt8xxx_sdio.o
+mbt8xxx_sdio-objs := $(BTOBJS)
+else
 obj-m := mbt8xxx.o
 mbt8xxx-objs := $(BTOBJS)
-
+endif
 
 
 # Otherwise we were called directly from the command line; invoke the kernel build system.
@@ -120,7 +125,11 @@ build:		echo default
 		mkdir $(BINDIR); \
 	fi
 
-	cp -f mbt8xxx.$(MODEXT) $(BINDIR)/mbt8xxx$(DBG).$(MODEXT)
+ifeq ($(CONFIG_MULTI_INTERFACE), y)
+	cp -f mbt8xxx_sdio.$(MODEXT) $(BINDIR)/mbt8977_sdio$(DBG).$(MODEXT)
+else
+	cp -f mbt8xxx.$(MODEXT) $(BINDIR)/mbt8977$(DBG).$(MODEXT)
+endif
 	cp -r config $(BINDIR)
 
 	cp -f script/sdio_mmc/* $(BINDIR)/

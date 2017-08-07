@@ -2,7 +2,7 @@
   *
   * @brief This file contains the char device function calls
   *
-  * Copyright (C) 2010-2016, Marvell International Ltd.
+  * Copyright (C) 2010-2017, Marvell International Ltd.
   *
   * This software file (the "File") is distributed by Marvell International
   * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -667,28 +667,12 @@ register_char_dev(struct char_dev *dev, struct class *char_class,
 		device_create(char_class, NULL,
 			      MKDEV(mbtchar_major, dev->minor), NULL, dev_name);
 	}
-	if (dev->dev_type == FM_TYPE) {
-		device_create(char_class, NULL,
-			      MKDEV(mbtchar_major, dev->minor), NULL, dev_name);
-	}
-	if (dev->dev_type == NFC_TYPE) {
-		device_create(char_class, NULL,
-			      MKDEV(mbtchar_major, dev->minor), NULL, dev_name);
-	}
 	if (dev->dev_type == DEBUG_TYPE) {
 		device_create(char_class, NULL,
 			      MKDEV(mbtchar_major, dev->minor), NULL, dev_name);
 	}
 #else
 	if ((dev->dev_type == BT_TYPE) || (dev->dev_type == BT_AMP_TYPE)) {
-		device_create(char_class, NULL,
-			      MKDEV(mbtchar_major, dev->minor), dev_name);
-	}
-	if (dev->dev_type == FM_TYPE) {
-		device_create(char_class, NULL,
-			      MKDEV(mbtchar_major, dev->minor), dev_name);
-	}
-	if (dev->dev_type == NFC_TYPE) {
 		device_create(char_class, NULL,
 			      MKDEV(mbtchar_major, dev->minor), dev_name);
 	}

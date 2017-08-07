@@ -1,7 +1,7 @@
 ===============================================================================
 			U S E R  M A N U A L
 
- Copyright (C) 2003-2016, Marvell International Ltd.
+ Copyright (C) 2003-2017, Marvell International Ltd.
 
  This software file (the "File") is distributed by Marvell International
  Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -36,14 +36,10 @@
 	There are some other parameters for debugging purpose etc. Use modinfo to check details.
 	  The bit settings of drv_mode are,
 		Bit 0: BT/AMP/BLE
-		Bit 1: FM
-		Bit 2: NFC
 	  mbt_drvdbg=<bit mask of driver debug message control>
 	  psmode=1|0 <enable PS mode (default) | disable PS mode>
 	  dts_enable=1|0 <Disable DTS | Enable DTS (default)>
 	  bt_name=<BT interface name>
-	  fm_name=<FM interface name>
-	  nfc_name=<NFC interface name>
 	  debug_intf=1|0 <Enable debug interface (default) | Disable debug interface>
 	  debug_name=<Debug interface name>
 	  mbt_pm_keep_power=1|0 <PM keep power in suspend (default) | PM no power in suspend>
@@ -56,6 +52,7 @@
 		e.g. copy bt_cal_data.conf to firmware directory, cal_cfg=mrvl/bt_cal_data.conf
       cal_cfg_ext=<CAL data config file name>
 		e.g. copy cal_data.conf to firmware directory, cal_cfg_ext=mrvl/cal_data.conf
+	  bt_fw_serial=0|1 <Support parallel download FW | Support serial download FW (default)>
 
 	btindrst = Independent reset configuration; high byte:GPIOpin;low byte:MODE
 

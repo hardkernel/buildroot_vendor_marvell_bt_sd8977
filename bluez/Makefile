@@ -1,20 +1,12 @@
 # File: Makefile
-# Copyright (C) 2007-2016, Marvell International Ltd.
+# Copyright (C) 2007-2017, Marvell International Ltd.
 #
 
-CROSS_COMPILE=arm-linux-gnueabihf-
 CC=		$(CROSS_COMPILE)gcc
 LD=		$(CROSS_COMPILE)ld
 
 BACKUP=		/root/backup
 YMD=		`date +%Y%m%d%H%M`
-
-#######COMPILE CHECK###################
-EXTRA_CFLAGS += -Wno-unused-but-set-variable
-EXTRA_CFLAGS += -Wno-pointer-sign
-#EXTRA_CFLAGS += -Wno-pointer-to-int-cast
-#EXTRA_CFLAGS += -Wno-int-to-pointer-cast
-
 
 #############################################################################
 # Configuration Options
@@ -26,6 +18,7 @@ EXTRA_CFLAGS += -Wno-pointer-sign
 # 1: PRINTM(MSG,...), PRINTM(FATAL,...), PRINTM(WARN,...) and PRINTM(INFO,...)
 # 2: All PRINTM()
 CONFIG_DEBUG=1
+
 
 # SDIO suspend/resume
 CONFIG_SDIO_SUSPEND_RESUME=y
@@ -56,9 +49,8 @@ endif
 
 
 
-#KERNELVERSION_X86 := 	$(shell uname -r)
-#KERNELDIR?=/lib/modules/$(KERNELVERSION_X86)/build
-KERNELDIR?=/mnt/nfsroot/weiguang.ruan/linux/buildroot/output/build/linux-custom
+KERNELVERSION_X86 := 	$(shell uname -r)
+KERNELDIR?=/lib/modules/$(KERNELVERSION_X86)/build
 
 EXTRA_CFLAGS += -I$(KERNELDIR)/include
 
@@ -68,6 +60,7 @@ LD += -S
 #ifdef SD8xxx
 BINDIR = ../bin_sd8xxx_bt
 #endif
+BINDIR = ../bin_sd8977_bt
 
 #############################################################################
 # Compiler Flags
@@ -98,15 +91,19 @@ BTOBJS = bt/bt_main.o bt/bt_sdiommc.o bt/bt_proc.o bt/mbt_char.o
 
 BTOBJS += bt/bt_init.o
 
+ifeq ($(CONFIG_MULTI_INTERFACE), y)
+obj-m := bt8xxx_sdio.o
+bt8xxx_sdio-objs := $(BTOBJS)
+else
 obj-m := bt8xxx.o
 bt8xxx-objs := $(BTOBJS)
-
+endif
 
 
 # Otherwise we were called directly from the command line; invoke the kernel build system.
 else
 default:
-	$(MAKE) -C $(KERNELDIR) ARCH=arm M=$(PWD) modules -j8
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 endif
 
 ###############################################################
@@ -126,7 +123,11 @@ build:		echo default
 		mkdir $(BINDIR); \
 	fi
 
-	cp -f bt8xxx.$(MODEXT) $(BINDIR)/bt8xxx$(DBG).$(MODEXT)
+ifeq ($(CONFIG_MULTI_INTERFACE), y)
+	cp -f bt8xxx_sdio.$(MODEXT) $(BINDIR)/bt8977_sdio$(DBG).$(MODEXT)
+else
+	cp -f bt8xxx.$(MODEXT) $(BINDIR)/bt8977$(DBG).$(MODEXT)
+endif
 	cp -r config $(BINDIR)
 
 	cp -f script/sdio_mmc/* $(BINDIR)/
@@ -144,7 +145,6 @@ clean:
 	-find . -name "*.symvers" -exec rm {} \;
 	-find . -name "modules.order" -exec rm {} \;
 	-rm -rf .tmp_versions
-	-rm -rf modules.builtin
 	$(MAKE) -C app/fm_app $@
 
 install: default

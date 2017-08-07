@@ -3,7 +3,7 @@
   * @brief This file contains the init functions for BlueTooth
   * driver.
   *
-  * Copyright (C) 2011-2016, Marvell International Ltd.
+  * Copyright (C) 2011-2017, Marvell International Ltd.
   *
   * This software file (the "File") is distributed by Marvell International
   * Ltd. under the terms of the GNU General Public License Version 2, June 1991
@@ -535,6 +535,7 @@ bt_process_cal_cfg(bt_private *priv, u8 *data, u32 size, char *mac)
 	u8 *mac_data = NULL;
 	u32 cal_data_len;
 	int ret = BT_STATUS_FAILURE;
+	u8 *pcal_data = cal_data;
 
 	memset(bt_mac, 0, sizeof(bt_mac));
 	cal_data_len = sizeof(cal_data);
@@ -549,7 +550,7 @@ bt_process_cal_cfg(bt_private *priv, u8 *data, u32 size, char *mac)
 		       MAC2STR(bt_mac));
 		mac_data = bt_mac;
 	}
-	if (BT_STATUS_SUCCESS != bt_load_cal_data(priv, cal_data, mac_data)) {
+	if (BT_STATUS_SUCCESS != bt_load_cal_data(priv, pcal_data, mac_data)) {
 		PRINTM(FATAL, "BT: Fail to load calibrate data\n");
 		goto done;
 	}
